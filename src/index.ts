@@ -1,6 +1,6 @@
 import { romanize } from 'es-hangul'
 import { api, Stream } from 'misskey-js'
-import { createEmoji } from './image.js'
+import { draw } from './image.js'
 
 const prefix = 'ko_'
 const category = '텍모지'
@@ -17,13 +17,41 @@ if (!emojiAdminToken) throw new Error('MISSKEY_EMOJI_ADMIN_TOKEN is not set')
 const botClient = new api.APIClient({ origin: host, credential: botToken })
 const emojiAdminClient = new api.APIClient({ origin: host, credential: emojiAdminToken })
 
-async function isEmojiAvailable(name: string) {
+function createPayload(comment: string) {
+  const pronunciation = comment.replaceAll(/\s/g, '')
+  const aliases = comment === pronunciation ? [comment] : [comment, pronunciation]
+
+  const name = prefix + romanize(pronunciation)
+  const reaction = `:${name}:`
+
+  return { pronunciation, aliases, name, reaction }
+}
+
+async function isEmojiRegistered(name: string) {
   try {
     const emoji = await emojiAdminClient.request('emoji', { name })
-    return !emoji
+    return Boolean(emoji)
   } catch {
-    return true
+    return false
   }
+}
+
+class AlreadyRegisteredError extends Error {
+  public reaction: string
+  constructor(reaction: string) {
+    super(`${reaction} is already registered in ${host}`)
+    this.reaction = reaction
+  }
+}
+
+async function createReaction(comment: string) {
+  const { name, aliases, reaction } = createPayload(comment)
+  if (await isEmojiRegistered(name)) throw new AlreadyRegisteredError(reaction)
+
+  const { id: fileId } = await botClient.request('drive/files/create', { name, comment, file: await draw(comment) })
+  await emojiAdminClient.request('admin/emoji/add', { name, fileId, category, aliases })
+
+  return reaction
 }
 
 const stream = new Stream(host, { token: botToken })
@@ -35,26 +63,25 @@ mainChannel.on('notification', async (notification) => {
   const { text, id: noteId, visibility } = notification.note
   if (!text) return
 
-  const keyword = text.match(/:([^:]+):/)?.[1]?.trim()
-  if (!keyword) return
+  const comments = [...text.matchAll(/:([^:]+):/g)].map((m) => m[1].trim()).filter((m) => m)
+  if (!comments.length) return
 
-  // "당 신 이 몰 랐 던 사 실" 추가하면 "당신이몰랐던사실"도 태그로 등록
-  const denseKeyword = keyword.replaceAll(/\s/g, '')
-  const [name, aliases] = [prefix + romanize(denseKeyword), keyword === denseKeyword ? [keyword] : [keyword, denseKeyword]]
+  const result = await Promise.allSettled(comments.map(createReaction))
 
-  if (await isEmojiAvailable(name)) {
-    try {
-      const file = await createEmoji(keyword)
-      const { id: fileId } = await botClient.request('drive/files/create', { name, file, comment: keyword })
+  const added = result.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
+  const skipped = result.flatMap((r) => (r.status === 'rejected' && r.reason instanceof AlreadyRegisteredError ? [r.reason.reaction] : []))
+  const failed = result.filter((r) => r.status === 'rejected' && !(r.reason instanceof AlreadyRegisteredError))
 
-      await emojiAdminClient.request('admin/emoji/add', { name, fileId, category, aliases })
-      await botClient.request('notes/reactions/create', { noteId, reaction: `:${name}:` })
-      await botClient.request('notes/create', { visibility, replyId: noteId, text: `:${name}: ${name} 커모지가 등록되었어요!` })
-    } catch (error) {
-      console.error(error)
-      await botClient.request('notes/create', { visibility, replyId: noteId, text: `실패했습니다... 관리자에게 문의하세요...` })
-    }
-  } else {
-    await botClient.request('notes/create', { visibility, replyId: noteId, text: `:${name}: 이미 ${name} 커모지가 등록되어 있어요.` })
-  }
+  const reply = [
+    `🤖 요청 ${result.length}건, 성공 ${added.length}건, 스킵 ${skipped.length}건, 실패 ${failed.length}`,
+    '',
+    added.length > 0 ? `🆕 새로 추가됨: ${added.join(' ')}` : null,
+    skipped.length > 0 ? `➡️ 이미 등록됨: ${skipped.join(' ')}` : null,
+  ]
+
+  await botClient.request('notes/create', {
+    visibility,
+    replyId: noteId,
+    text: reply.filter((line) => line !== null).join('\n'),
+  })
 })

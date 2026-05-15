@@ -18,7 +18,7 @@ const require = createRequire(import.meta.url)
 const fontDir = dirname(require.resolve('@kfonts/line-seed-sans-kr/package.json'))
 FontLibrary.use(fontFamily, [join(fontDir, 'LINESeedKR-Bd.woff2')])
 
-export async function createEmoji(text: string): Promise<Blob> {
+export async function draw(text: string): Promise<Blob> {
   const borderWidth = height * borderRatio
 
   const measureCanvas = new Canvas(1, 1)
@@ -67,7 +67,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'examples')
   await mkdir(outDir, { recursive: true })
   for (const text of examples) {
-    const blob = await createEmoji(text)
+    const blob = await draw(text)
     const buf = Buffer.from(await blob.arrayBuffer())
     await writeFile(join(outDir, `${text}.png`), buf)
     console.log(`wrote ${text}.png`)
