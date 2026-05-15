@@ -57,14 +57,16 @@ async function createReaction(comment: string) {
 const stream = new Stream(host, { token: botToken })
 const mainChannel = stream.useChannel('main')
 mainChannel.on('notification', async (notification) => {
-  if (notification.type !== 'mention') return
+  if (notification.type !== 'mention' && notification.type !== 'reply') return
 
-  const { user, text, id: replyId, visibility } = notification.note
+  const { user, text, id: replyId, visibility: v } = notification.note
   if (user.isBot || user.host !== null || !text?.trim()) return
 
-  const comments = [...text.matchAll(/:([^:]+):/g)].map((m) => m[1].trim()).filter((m) => m)
-  console.log('mention:', user.username, text, comments)
+  // 봇 따위가 공개글을 써서는 안 된다...
+  const visibility = v === 'public' ? 'home' : v
+  console.log('mention:', user.username, text)
 
+  const comments = [...text.matchAll(/:([^:]+):/g)].map((m) => m[1].trim()).filter((m) => m)
   if (!comments.length) {
     return await botClient.request('notes/create', {
       replyId,
