@@ -20,6 +20,7 @@
   "dependencies": {
     "@kfonts/line-seed-sans-kr": "^0.1.0",
     "es-hangul": "^2.3.8",
-    "misskey-js": "2026.5.2-beta.0"
+    "misskey-js": "2026.5.2-beta.0",
+    "skia-canvas": "^3.0.8"
   }
 }
