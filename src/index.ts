@@ -58,30 +58,38 @@ const stream = new Stream(host, { token: botToken })
 const mainChannel = stream.useChannel('main')
 mainChannel.on('notification', async (notification) => {
   if (notification.type !== 'mention') return
-  if (notification.user.host !== null) return
 
-  const { text, id: noteId, visibility } = notification.note
-  if (!text) return
+  const { user, text, id: replyId, visibility } = notification.note
+  if (user.isBot || user.host !== null || !text?.trim()) return
 
   const comments = [...text.matchAll(/:([^:]+):/g)].map((m) => m[1].trim()).filter((m) => m)
-  if (!comments.length) return
+  console.log('mention:', user.username, text, comments)
+
+  if (!comments.length) {
+    return await botClient.request('notes/create', {
+      replyId,
+      visibility,
+      text: '🤖 안녕하세요! 저에게 :이렇게: 만들고 싶은 커모지를 멘션으로 일려주세요.',
+    })
+  }
 
   const result = await Promise.allSettled(comments.map(createReaction))
+  console.log('result:', result)
 
   const added = result.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
   const skipped = result.flatMap((r) => (r.status === 'rejected' && r.reason instanceof AlreadyRegisteredError ? [r.reason.reaction] : []))
   const failed = result.filter((r) => r.status === 'rejected' && !(r.reason instanceof AlreadyRegisteredError))
 
   const reply = [
-    `🤖 요청 ${result.length}건, 성공 ${added.length}건, 스킵 ${skipped.length}건, 실패 ${failed.length}`,
+    `🤖 요청 ${result.length}건, 성공 ${added.length}건, 스킵 ${skipped.length}건, 실패 ${failed.length}건`,
     '',
     added.length > 0 ? `🆕 새로 추가됨: ${added.join(' ')}` : null,
     skipped.length > 0 ? `➡️ 이미 등록됨: ${skipped.join(' ')}` : null,
   ]
 
-  await botClient.request('notes/create', {
+  return await botClient.request('notes/create', {
+    replyId,
     visibility,
-    replyId: noteId,
     text: reply.filter((line) => line !== null).join('\n'),
   })
 })
