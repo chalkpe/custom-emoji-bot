@@ -9,7 +9,7 @@ const height = 256
 const fontFamily = 'LINE Seed Sans KR'
 
 const borderRatio = 1 / 15
-const paddingRatio = 1 / 10
+const paddingRatio = 1 / 8
 const referenceFontSize = 200
 
 const examples = ['그럴듯해', '위업', '최고', '당 신 이 몰 랐 던 사 실', '당신은잘오다']
