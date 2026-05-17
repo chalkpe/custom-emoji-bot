@@ -1,4 +1,3 @@
-import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Canvas, FontLibrary } from 'skia-canvas'
@@ -12,11 +11,9 @@ const fontFamily = 'LINE Seed Sans KR'
 const borderRatio = 1 / 15
 const referenceFontSize = 200
 
-const examples = ['그럴듯해', '메롱', '404', '당 신 이 몰 랐 던 사 실', 'SAM']
+const examples = ['그럴듯해', '위업', '최고', '당 신 이 몰 랐 던 사 실', '당신은잘오다']
 
-const require = createRequire(import.meta.url)
-const fontDir = dirname(require.resolve('@kfonts/line-seed-sans-kr/package.json'))
-FontLibrary.use(fontFamily, [join(fontDir, 'LINESeedKR-Bd.woff2')])
+FontLibrary.use(fontFamily, [join(import.meta.dirname, 'font.otf')])
 
 export async function draw(text: string): Promise<Blob> {
   const borderWidth = height * borderRatio
