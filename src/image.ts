@@ -9,6 +9,7 @@ const height = 256
 const fontFamily = 'LINE Seed Sans KR'
 
 const borderRatio = 1 / 15
+const paddingRatio = 1 / 10
 const referenceFontSize = 200
 
 const examples = ['그럴듯해', '위업', '최고', '당 신 이 몰 랐 던 사 실', '당신은잘오다']
@@ -17,6 +18,7 @@ FontLibrary.use(fontFamily, [join(import.meta.dirname, 'font.otf')])
 
 export async function draw(text: string): Promise<Blob> {
   const borderWidth = height * borderRatio
+  const padding = height * paddingRatio
 
   const measureCanvas = new Canvas(1, 1)
   const mctx = measureCanvas.getContext('2d')
@@ -32,9 +34,10 @@ export async function draw(text: string): Promise<Blob> {
   const fontSize = referenceFontSize * scale
   const textWidth = refTextWidth * scale
 
-  const canvasWidth = Math.ceil(textWidth + 2 * borderWidth)
+  const canvasWidth = Math.ceil(textWidth + 2 * borderWidth + 2 * padding)
+  const canvasHeight = height + 2 * padding
 
-  const canvas = new Canvas(canvasWidth, height)
+  const canvas = new Canvas(canvasWidth, canvasHeight)
   const ctx = canvas.getContext('2d')
 
   ctx.font = `bold ${fontSize}px "${fontFamily}"`
@@ -42,14 +45,14 @@ export async function draw(text: string): Promise<Blob> {
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
 
-  const x = borderWidth + m.actualBoundingBoxLeft * scale
-  const y = borderWidth + m.actualBoundingBoxAscent * scale
+  const x = padding + borderWidth + m.actualBoundingBoxLeft * scale
+  const y = padding + borderWidth + m.actualBoundingBoxAscent * scale
 
   ctx.strokeStyle = borderColor
   ctx.lineWidth = 2 * borderWidth
   ctx.strokeText(text, x, y)
 
-  const gradient = ctx.createLinearGradient(0, borderWidth, 0, height - borderWidth)
+  const gradient = ctx.createLinearGradient(0, padding + borderWidth, 0, padding + height - borderWidth)
   gradient.addColorStop(0, textColor.start)
   gradient.addColorStop(1, textColor.end)
   ctx.fillStyle = gradient
