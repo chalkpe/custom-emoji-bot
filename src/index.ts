@@ -63,6 +63,14 @@ function expandJamo(text: string): string {
   return [...text].map((ch) => jamoNames[ch] ?? ch).join('')
 }
 
+function encodeName(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, (c) => `_${c.charCodeAt(0).toString(16).padStart(2, '0')}_`)
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+}
+
 const host = process.env.MISSKEY_HOST
 if (!host) throw new Error('MISSKEY_HOST is not set')
 
@@ -79,7 +87,7 @@ function createPayload(comment: string) {
   const pronunciation = expandJamo(comment.replaceAll(/\s/g, ''))
   const aliases = comment === pronunciation ? [comment] : [comment, pronunciation]
 
-  const name = prefix + romanize(pronunciation)
+  const name = prefix + encodeName(romanize(pronunciation))
   const reaction = `:${name}:`
 
   return { pronunciation, aliases, name, reaction }
