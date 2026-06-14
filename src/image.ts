@@ -2,8 +2,19 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Canvas, FontLibrary } from 'skia-canvas'
 
-const borderColor = '#ffffff'
-const textColor = { start: '#EA7614', end: '#FAAA3B' }
+function hexColor(name: string, fallback: string): string {
+  const value = process.env[name] ?? fallback
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) {
+    throw new Error(`${name} must be a 6-digit hex color without '#' (got "${value}")`)
+  }
+  return `#${value}`
+}
+
+const borderColor = hexColor('BORDER_COLOR', 'ffffff')
+const textColor = {
+  start: hexColor('TEXT_COLOR_START', 'EA7614'),
+  end: hexColor('TEXT_COLOR_END', 'FAAA3B'),
+}
 
 const height = 256
 const fontFamily = 'LINE Seed Sans KR'
