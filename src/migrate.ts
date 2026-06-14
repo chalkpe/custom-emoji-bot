@@ -1,6 +1,7 @@
 import { api } from 'misskey-js'
 import { draw } from './image.js'
 
+const prefix = 'ko_'
 const category = process.env.EMOJI_CATEGORY ?? '텍모지'
 
 const host = process.env.MISSKEY_HOST
@@ -28,7 +29,7 @@ async function fetchAllCategoryEmojis() {
     const page = await fetchPage(untilId)
 
     if (!page.length) break
-    result.push(...page.filter((e) => e.category === category))
+    result.push(...page.filter((e) => e.category === category && e.name.startsWith(prefix)))
     untilId = page[page.length - 1].id
 
     if (page.length < 100) break
