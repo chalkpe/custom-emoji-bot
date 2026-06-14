@@ -3,7 +3,7 @@ import { api, Stream } from 'misskey-js'
 import { draw } from './image.js'
 
 const prefix = 'ko_'
-const category = '텍모지'
+const category = process.env.EMOJI_CATEGORY ?? '텍모지'
 
 const jamoNames: Record<string, string> = {
   ㄳ: '기역시옷',

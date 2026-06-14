@@ -1,7 +1,7 @@
 import { api } from 'misskey-js'
 import { draw } from './image.js'
 
-const category = '텍모지'
+const category = process.env.EMOJI_CATEGORY ?? '텍모지'
 
 const host = process.env.MISSKEY_HOST
 if (!host) throw new Error('MISSKEY_HOST is not set')

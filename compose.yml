@@ -1,0 +1,14 @@
+services:
+  bot:
+    image: ghcr.io/chalkpe/custom-emoji-bot:edge
+    restart: unless-stopped
+    environment:
+      MISSKEY_HOST: "https://"
+      MISSKEY_BOT_TOKEN: ""
+      MISSKEY_EMOJI_ADMIN_TOKEN: ""
+      EMOJI_CATEGORY: "텍모지"
+      BORDER_COLOR: "ffffff"
+      TEXT_COLOR_START: "006b0c"
+      TEXT_COLOR_END: "006b0c"
+    volumes:
+      - ./font.otf:/app/src/font.otf:ro
