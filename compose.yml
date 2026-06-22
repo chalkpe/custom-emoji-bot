@@ -8,7 +8,8 @@ services:
       MISSKEY_EMOJI_ADMIN_TOKEN: ""
       EMOJI_CATEGORY: "텍모지"
       EMOJI_PREFIX: "ko_"
-      BORDER_COLOR: "ffffff"
+      BORDER_COLOR_START: "ffffff"
+      BORDER_COLOR_END: "ffffff"
       TEXT_COLOR_START: "006b0c"
       TEXT_COLOR_END: "006b0c"
     volumes:

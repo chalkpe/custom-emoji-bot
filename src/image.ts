@@ -10,7 +10,10 @@ function hexColor(name: string, fallback: string): string {
   return `#${value}`
 }
 
-const borderColor = hexColor('BORDER_COLOR', 'ffffff')
+const borderColor = {
+  start: hexColor('BORDER_COLOR_START', 'ffffff'),
+  end: hexColor('BORDER_COLOR_END', 'ffffff'),
+}
 const textColor = {
   start: hexColor('TEXT_COLOR_START', 'EA7614'),
   end: hexColor('TEXT_COLOR_END', 'FAAA3B'),
@@ -147,9 +150,16 @@ export async function draw(text: string): Promise<Blob> {
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
 
-  const gradient = ctx.createLinearGradient(0, padding + borderWidth, 0, padding + height - borderWidth)
-  gradient.addColorStop(0, textColor.start)
-  gradient.addColorStop(1, textColor.end)
+  const gradientTop = padding + borderWidth
+  const gradientBottom = padding + height - borderWidth
+
+  const textGradient = ctx.createLinearGradient(0, gradientTop, 0, gradientBottom)
+  textGradient.addColorStop(0, textColor.start)
+  textGradient.addColorStop(1, textColor.end)
+
+  const borderGradient = ctx.createLinearGradient(0, gradientTop, 0, gradientBottom)
+  borderGradient.addColorStop(0, borderColor.start)
+  borderGradient.addColorStop(1, borderColor.end)
 
   const charGap = (gap + borderGap) * scale
   const glyphs: { char: string; x: number; y: number }[] = []
@@ -176,11 +186,11 @@ export async function draw(text: string): Promise<Blob> {
     lineTop += (layout.refTextHeight + lineGap) * scale
   }
 
-  ctx.strokeStyle = borderColor
+  ctx.strokeStyle = borderGradient
   ctx.lineWidth = 2 * borderWidth
   for (const g of glyphs) ctx.strokeText(g.char, g.x, g.y)
 
-  ctx.fillStyle = gradient
+  ctx.fillStyle = textGradient
   for (const g of glyphs) ctx.fillText(g.char, g.x, g.y)
 
   const buffer = await canvas.toBuffer('png')
