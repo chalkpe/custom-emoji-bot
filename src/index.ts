@@ -5,6 +5,13 @@ import { draw } from './image.js'
 const prefix = process.env.EMOJI_PREFIX ?? 'ko_'
 const category = process.env.EMOJI_CATEGORY ?? '텍모지'
 
+const userAllowlist = new Set(
+  (process.env.USER_ALLOWLIST ?? '')
+    .split(',')
+    .map((u) => u.trim().toLowerCase())
+    .filter((u) => u),
+)
+
 const jamoNames: Record<string, string> = {
   ㄳ: '기역시옷',
   ㄵ: '니은지읒',
@@ -139,6 +146,14 @@ mainChannel.on('notification', async (notification) => {
   // 봇 따위가 공개글을 써서는 안 된다...
   const visibility = v === 'public' ? 'home' : v
   console.log('mention:', user.username, text)
+
+  if (userAllowlist.size > 0 && !userAllowlist.has(user.username.toLowerCase())) {
+    return await botClient.request('notes/create', {
+      replyId,
+      visibility,
+      text: `@${user.username} 🤖 죄송합니다. 허용된 사용자만 이용할 수 있어요.`,
+    })
+  }
 
   const comments = [...text.matchAll(/:([^:]+):/g)].map((m) => m[1].trim()).filter((m) => m)
   if (!comments.length) {
