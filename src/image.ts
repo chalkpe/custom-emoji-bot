@@ -10,9 +10,10 @@ function hexColor(name: string, fallback: string): string {
   return `#${value}`
 }
 
+const legacyBorderColor = process.env.BORDER_COLOR ?? 'ffffff'
 const borderColor = {
-  start: hexColor('BORDER_COLOR_START', 'ffffff'),
-  end: hexColor('BORDER_COLOR_END', 'ffffff'),
+  start: hexColor('BORDER_COLOR_START', legacyBorderColor),
+  end: hexColor('BORDER_COLOR_END', legacyBorderColor),
 }
 const textColor = {
   start: hexColor('TEXT_COLOR_START', 'EA7614'),
