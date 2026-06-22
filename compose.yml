@@ -7,6 +7,7 @@ services:
       MISSKEY_BOT_TOKEN: ""
       MISSKEY_EMOJI_ADMIN_TOKEN: ""
       EMOJI_CATEGORY: "텍모지"
+      EMOJI_PREFIX: "ko_"
       BORDER_COLOR: "ffffff"
       TEXT_COLOR_START: "006b0c"
       TEXT_COLOR_END: "006b0c"

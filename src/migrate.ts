@@ -1,7 +1,7 @@
 import { api } from 'misskey-js'
 import { draw } from './image.js'
 
-const prefix = 'ko_'
+const prefix = process.env.EMOJI_PREFIX ?? 'ko_'
 const category = process.env.EMOJI_CATEGORY ?? '텍모지'
 
 const host = process.env.MISSKEY_HOST
