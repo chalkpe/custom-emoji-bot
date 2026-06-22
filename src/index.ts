@@ -112,7 +112,13 @@ class AlreadyRegisteredError extends Error {
   }
 }
 
+const emojiNamePattern = /^[a-zA-Z0-9_]+$/
+
 async function createReaction(comment: string) {
+  if (emojiNamePattern.test(comment) && (await isEmojiRegistered(comment))) {
+    throw new AlreadyRegisteredError(`:${comment}:`)
+  }
+
   const { name, aliases, reaction } = createPayload(comment)
   if (await isEmojiRegistered(name)) throw new AlreadyRegisteredError(reaction)
 
