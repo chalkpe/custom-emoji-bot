@@ -23,8 +23,24 @@ const borderRatio = 1 / 15
 const paddingRatio = 1 / 8
 const referenceFontSize = 200
 const gapRatio = 1 / 15
+const lineGapRatio = 1 / 10
 
-const examples = ['그럴듯해', '위업', '최고', '당 신 이 몰 랐 던 사 실', '당신은잘오다', 'ㄹㅇㅋㅋ', 'ㅎㅇ요']
+const gap = referenceFontSize * gapRatio
+const lineGap = referenceFontSize * lineGapRatio
+
+const examples = [
+  '그럴듯해',
+  '위업',
+  '최고',
+  '당 신 이 몰 랐 던 사 실',
+  '당신은잘오다',
+  'ㄹㅇㅋㅋ',
+  'ㅎㅇ요',
+  '나를모르느냐',
+  '나를모\n르느냐',
+  '나를\n모르느냐',
+  'ㅋㅋㅋ\nㅋㅋㅋ\nㅋㅋㅋ',
+]
 
 FontLibrary.use(fontFamily, [join(import.meta.dirname, 'font.otf')])
 
@@ -71,17 +87,21 @@ function measureInkBox(char: string): InkBox {
   }
 }
 
-export async function draw(text: string): Promise<Blob> {
-  const borderWidth = height * borderRatio
-  const padding = height * paddingRatio
+type LineLayout = {
+  chars: string[]
+  boxes: InkBox[]
+  refAscent: number
+  refTextHeight: number
+  refTextWidth: number
+}
 
-  const chars = [...text]
+function layoutLine(line: string): LineLayout {
+  const chars = [...line]
   const boxes = chars.map(measureInkBox)
 
-  const gap = referenceFontSize * gapRatio
   const inkBoxes = boxes.filter((b) => !b.empty)
-  const refAscent = Math.max(...inkBoxes.map((b) => b.top))
-  const refDescent = Math.max(...inkBoxes.map((b) => -b.bottom), 0)
+  const refAscent = inkBoxes.length ? Math.max(...inkBoxes.map((b) => b.top)) : 0
+  const refDescent = inkBoxes.length ? Math.max(...inkBoxes.map((b) => -b.bottom), 0) : 0
   const refTextHeight = refAscent + refDescent
 
   let refTextWidth = 0
@@ -91,9 +111,29 @@ export async function draw(text: string): Promise<Blob> {
     if (i < boxes.length - 1) refTextWidth += gap
   }
 
+  return { chars, boxes, refAscent, refTextHeight, refTextWidth }
+}
+
+export async function draw(text: string): Promise<Blob> {
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+  const layouts = lines.map(layoutLine)
+
+  const multiline = layouts.length > 1
+  const padding = multiline ? 0 : height * paddingRatio
+  const borderWidth = height * borderRatio * (multiline ? 0.75 : 1)
+
+  const refTotalHeight = layouts.reduce((sum, l) => sum + l.refTextHeight, 0) + (layouts.length - 1) * lineGap
   const targetTextHeight = height - 2 * borderWidth
-  const scale = targetTextHeight / refTextHeight
+  const scale = targetTextHeight / refTotalHeight
   const fontSize = referenceFontSize * scale
+
+  const borderGap = multiline ? (-0.1 * borderWidth) / scale : 0
+  const lineRefWidth = (l: LineLayout) => l.refTextWidth + Math.max(l.chars.length - 1, 0) * borderGap
+
+  const refTextWidth = Math.max(...layouts.map(lineRefWidth))
   const textWidth = refTextWidth * scale
 
   const canvasWidth = Math.ceil(textWidth + 2 * borderWidth + 2 * padding)
@@ -107,33 +147,41 @@ export async function draw(text: string): Promise<Blob> {
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
 
-  const baselineY = padding + borderWidth + refAscent * scale
-
   const gradient = ctx.createLinearGradient(0, padding + borderWidth, 0, padding + height - borderWidth)
   gradient.addColorStop(0, textColor.start)
   gradient.addColorStop(1, textColor.end)
 
-  let cursorX = padding + borderWidth
-  for (let i = 0; i < chars.length; i++) {
-    const b = boxes[i]
-    if (b.empty) {
-      cursorX += b.advance * scale
-      if (i < chars.length - 1) cursorX += gap * scale
-      continue
+  const charGap = (gap + borderGap) * scale
+  const glyphs: { char: string; x: number; y: number }[] = []
+
+  let lineTop = padding + borderWidth
+  for (const layout of layouts) {
+    const baselineY = lineTop + layout.refAscent * scale
+    let cursorX = padding + borderWidth + (textWidth - lineRefWidth(layout) * scale) / 2
+
+    for (let i = 0; i < layout.chars.length; i++) {
+      const b = layout.boxes[i]
+      if (b.empty) {
+        cursorX += b.advance * scale
+        if (i < layout.chars.length - 1) cursorX += charGap
+        continue
+      }
+
+      glyphs.push({ char: layout.chars[i], x: cursorX - b.left * scale, y: baselineY })
+
+      cursorX += (b.right - b.left) * scale
+      if (i < layout.chars.length - 1) cursorX += charGap
     }
 
-    const drawX = cursorX - b.left * scale
-
-    ctx.strokeStyle = borderColor
-    ctx.lineWidth = 2 * borderWidth
-    ctx.strokeText(chars[i], drawX, baselineY)
-
-    ctx.fillStyle = gradient
-    ctx.fillText(chars[i], drawX, baselineY)
-
-    cursorX += (b.right - b.left) * scale
-    if (i < chars.length - 1) cursorX += gap * scale
+    lineTop += (layout.refTextHeight + lineGap) * scale
   }
+
+  ctx.strokeStyle = borderColor
+  ctx.lineWidth = 2 * borderWidth
+  for (const g of glyphs) ctx.strokeText(g.char, g.x, g.y)
+
+  ctx.fillStyle = gradient
+  for (const g of glyphs) ctx.fillText(g.char, g.x, g.y)
 
   const buffer = await canvas.toBuffer('png')
   return new Blob([new Uint8Array(buffer)], { type: 'image/png' })
@@ -146,7 +194,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   for (const text of examples) {
     const blob = await draw(text)
     const buf = Buffer.from(await blob.arrayBuffer())
-    await writeFile(join(outDir, `${text}.png`), buf)
-    console.log(`wrote ${text}.png`)
+    const fileName = `${text.replaceAll('\n', '_')}.png`
+    await writeFile(join(outDir, fileName), buf)
+    console.log(`wrote ${fileName}`)
   }
 }

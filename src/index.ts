@@ -84,8 +84,10 @@ const botClient = new api.APIClient({ origin: host, credential: botToken })
 const emojiAdminClient = new api.APIClient({ origin: host, credential: emojiAdminToken })
 
 function createPayload(comment: string) {
-  const pronunciation = expandJamo(comment.replaceAll(/\s/g, ''))
-  const aliases = comment === pronunciation ? [comment] : [comment, pronunciation]
+  const pronunciation = expandJamo(comment.replace(/\r\n?/g, '\n').replace(/[^\S\n]+/g, ''))
+  const flat = comment.replaceAll(/\s/g, '')
+  const flatPronunciation = expandJamo(flat)
+  const aliases = flat === flatPronunciation ? [flat] : [flat, flatPronunciation]
 
   const name = prefix + encodeName(romanize(pronunciation))
   const reaction = `:${name}:`
